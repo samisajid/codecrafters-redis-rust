@@ -23,9 +23,23 @@ fn main() {
 
                 let mut buf = [0; 512];
 
-                stream.read(&mut buf).unwrap();
-
-                stream.write(b"+PONG\r\n").unwrap();
+                loop {
+                    match stream.read(&mut buf) {
+                        Ok(0) => {
+                            // إذا كانت القراءة تعيد 0، فإن العميل قد أغلق الاتصال
+                            println!("Client disconnected");
+                            break;
+                        }
+                        Ok(_) => {
+                            // الرد على الطلب بإرسال PONG
+                            stream.write(b"+PONG\r\n").unwrap();
+                        }
+                        Err(e) => {
+                            println!("Error: {}", e);
+                            break;
+                        }
+                    }
+                }
             }
             Err(e) => {
                 println!("error: {}", e);
