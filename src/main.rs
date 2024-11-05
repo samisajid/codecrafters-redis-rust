@@ -1,45 +1,27 @@
+
 #![allow(unused_imports)]
-use std::{
+use tokio::net::TcpListener;
+use tokio::io::{AsyncReadExt,AsyncWriteExt};
 
-    io::{Read, Write},
+#[tokio::main]
 
-    net::TcpListener,
-
-};
-
-fn main() {
-    // You can use print statements as follows for debugging, they'll be visible when running tests.
-    println!("Logs from your program will appear here!");
-
-    // Uncomment this block to pass the first stage
-    
-    let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
-    
-    for stream in listener.incoming() {
+async fn main() {
+    let listener = TcpListener::bind("127.0.0.1:6379").await.unwrap();
+    loop {
+        let stream = listener.accept().await;
         match stream {
-            Ok(mut stream) => {
-
-                println!("accepted new connection");
-
-                let mut buf = [0; 512];
-
-                loop {
-                    match stream.read(&mut buf) {
-                        Ok(0) => {
-                            // إذا كانت القراءة تعيد 0، فإن العميل قد أغلق الاتصال
-                            println!("Client disconnected");
+            Ok((mut stream,_)) => {
+                println!("accepted new connection"); 
+                tokio::spawn(async move {
+                    let mut buf = [0; 512];
+                    loop {
+                        let read_count = stream.read(&mut buf).await.unwrap();
+                        if read_count == 0 {
                             break;
                         }
-                        Ok(_) => {
-                            // الرد على الطلب بإرسال PONG
-                            stream.write(b"+PONG\r\n").unwrap();
-                        }
-                        Err(e) => {
-                            println!("Error: {}", e);
-                            break;
-                        }
+                        stream.write(b"+PONG\r\n").await.unwrap();
                     }
-                }
+                });                          
             }
             Err(e) => {
                 println!("error: {}", e);
